@@ -12,8 +12,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.example.krestiki.composables.GameBoard
 import com.example.krestiki.ui.theme.KrestikiTheme
@@ -38,6 +38,7 @@ fun GameScreen(state: GameState, onAction: (GameAction) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                title = { Text("") }, // ✅ ИСПРАВЛЕНИЕ: Передаем пустой текст в качестве заголовка
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         GridSizeToggleButton(state.boardSize, onAction)
@@ -65,15 +66,16 @@ fun GameScreen(state: GameState, onAction: (GameAction) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class) // Добавлена аннотация для SingleChoiceSegmentedButtonRow
 @Composable
 fun GridSizeToggleButton(currentSize: Int, onAction: (GameAction) -> Unit) {
     val sizes = listOf(3, 5)
-    SingleChoiceSegmentedButtonRow {
+    SingleChoiceSegmentedButtonRow { // Этот компонент также является экспериментальным
         sizes.forEachIndexed { _, size ->
             SegmentedButton(
                 selected = currentSize == size,
                 onClick = { onAction(GameAction.SwitchGridSize(size)) },
-                shape = RectangleShape // Добавлен обязательный параметр shape
+                shape = RectangleShape
             ) {
                 Text(text = "$size×$size")
             }

@@ -18,6 +18,24 @@ import androidx.compose.ui.unit.dp
 import com.example.krestiki.composables.GameBoard
 import com.example.krestiki.ui.theme.KrestikiTheme
 
+// Предполагается, что эти определения существуют в ваших файлах GameState.kt и GameAction.kt
+// enum class PlayerSymbol { X, O }
+// data class GameState(
+//     // ... другие состояния
+//     val playerSymbol: PlayerSymbol? = null,
+//     val symbolSelectionDone: Boolean = false,
+//     val boardSize: Int = 3, // значение по умолчанию
+//     val gameStatus: GameStatus = GameStatus.IN_PROGRESS // значение по умолчанию
+// )
+// sealed class GameAction {
+//     object NewGame : GameAction()
+//     data class SwitchGridSize(val size: Int) : GameAction()
+//     data class SelectSymbol(val symbol: PlayerSymbol) : GameAction()
+//     // ... другие действия
+// }
+// enum class GameStatus { IN_PROGRESS, WIN_X, WIN_O, DRAW }
+
+
 class MainActivity : ComponentActivity() {
     private val viewModel: GameViewModel by viewModels()
 
@@ -38,13 +56,15 @@ fun GameScreen(state: GameState, onAction: (GameAction) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("") }, // ✅ ИСПРАВЛЕНИЕ: Передаем пустой текст в качестве заголовка
+                title = { Text("") }, 
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        GridSizeToggleButton(state.boardSize, onAction)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        if (state.symbolSelectionDone) { // Показываем только если символ выбран
+                            GridSizeToggleButton(state.boardSize, onAction)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         Button(onClick = { onAction(GameAction.NewGame) }) {
-                            Text("Новая игра")
+                            Text(if (state.symbolSelectionDone) "Новая игра" else "Сбросить выбор")
                         }
                     }
                 }
@@ -58,19 +78,44 @@ fun GameScreen(state: GameState, onAction: (GameAction) -> Unit) {
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            GameBoard(state = state, onAction = onAction)
-            if (state.gameStatus != GameStatus.IN_PROGRESS) {
-                GameResultDialog(status = state.gameStatus, onAction = onAction)
+            if (!state.symbolSelectionDone) {
+                SymbolSelectionScreen(onAction = onAction)
+            } else {
+                GameBoard(state = state, onAction = onAction)
+                if (state.gameStatus != GameStatus.IN_PROGRESS) {
+                    GameResultDialog(status = state.gameStatus, onAction = onAction)
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class) // Добавлена аннотация для SingleChoiceSegmentedButtonRow
+@Composable
+fun SymbolSelectionScreen(onAction: (GameAction) -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Выберите, кем играть:", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+        Row {
+            Button(onClick = { onAction(GameAction.SelectSymbol(PlayerSymbol.X)) }) {
+                Text("Играть за X")
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Button(onClick = { onAction(GameAction.SelectSymbol(PlayerSymbol.O)) }) {
+                Text("Играть за O")
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class) 
 @Composable
 fun GridSizeToggleButton(currentSize: Int, onAction: (GameAction) -> Unit) {
     val sizes = listOf(3, 5)
-    SingleChoiceSegmentedButtonRow { // Этот компонент также является экспериментальным
+    SingleChoiceSegmentedButtonRow { 
         sizes.forEachIndexed { _, size ->
             SegmentedButton(
                 selected = currentSize == size,

@@ -13,31 +13,42 @@ class GameViewModel : ViewModel() {
 
     fun onAction(action: GameAction) {
         when (action) {
-            is GameAction.CellClick -> onCellClick(action.row, action.col)
-            GameAction.NewGame -> resetGame()
+            is GameAction.MakeMove -> onCellClick(action.row, action.col) // Изменено с CellClick на MakeMove
+            is GameAction.NewGame -> resetGame()
             is GameAction.SwitchGridSize -> setGridSize(action.size)
+            is GameAction.SelectSymbol -> selectSymbol(action.symbol)
         }
     }
 
     private fun onCellClick(row: Int, col: Int) {
-        if (_gameState.value.board[row][col] == null && _gameState.value.gameStatus == GameStatus.IN_PROGRESS) {
-            val newBoard = _gameState.value.board.map { it.toMutableList() }.toMutableList()
-            newBoard[row][col] = 'X'
-            updateGameState(newBoard)
+        val currentState = _gameState.value
+        if (currentState.board[row][col] == null && currentState.gameStatus == GameStatus.IN_PROGRESS && currentState.symbolSelectionDone) {
+            val newBoard = currentState.board.map { it.toMutableList() }.toMutableList()
+            // Используем playerSymbol для хода игрока, если он выбран
+            val playerActualSymbol = currentState.playerSymbol?.name?.first() ?: currentState.currentPlayer
 
+            newBoard[row][col] = playerActualSymbol
+            
+            // Определяем символ компьютера на основе выбора игрока
+            val computerSymbol = if (playerActualSymbol == 'X') 'O' else 'X'
+
+            updateGameState(newBoard, playerActualSymbol) // Передаем текущего игрока
+
+            // Ход компьютера, если игра продолжается и игрок сделал ход
             if (_gameState.value.gameStatus == GameStatus.IN_PROGRESS) {
                 viewModelScope.launch {
-                    makeComputerMove()
+                    makeComputerMove(computerSymbol)
                 }
             }
         }
     }
 
-    private fun makeComputerMove() {
+    private fun makeComputerMove(computerSymbol: Char) {
+        val currentState = _gameState.value
         val emptyCells = mutableListOf<Pair<Int, Int>>()
-        for (i in 0 until _gameState.value.boardSize) {
-            for (j in 0 until _gameState.value.boardSize) {
-                if (_gameState.value.board[i][j] == null) {
+        for (i in 0 until currentState.boardSize) {
+            for (j in 0 until currentState.boardSize) {
+                if (currentState.board[i][j] == null) {
                     emptyCells.add(Pair(i, j))
                 }
             }
@@ -45,39 +56,74 @@ class GameViewModel : ViewModel() {
 
         if (emptyCells.isNotEmpty()) {
             val (row, col) = emptyCells.random()
-            val newBoard = _gameState.value.board.map { it.toMutableList() }.toMutableList()
-            newBoard[row][col] = 'O'
-            updateGameState(newBoard)
+            val newBoard = currentState.board.map { it.toMutableList() }.toMutableList()
+            newBoard[row][col] = computerSymbol
+            updateGameState(newBoard, computerSymbol) // Передаем символ компьютера
         }
     }
 
     private fun resetGame() {
-        _gameState.value = GameState(boardSize = _gameState.value.boardSize)
+        // Сбрасываем также выбор символа и флаг выбора
+        _gameState.value = GameState(
+            boardSize = _gameState.value.boardSize,
+            playerSymbol = null,
+            symbolSelectionDone = false
+        )
     }
 
     private fun setGridSize(size: Int) {
-        _gameState.value = GameState(boardSize = size, board = List(size) { List(size) { null } })
+        // При смене размера сетки также сбрасываем выбор символа
+        _gameState.value = GameState(
+            boardSize = size,
+            board = List(size) { List(size) { null } },
+            playerSymbol = null,
+            symbolSelectionDone = false
+        )
     }
 
-    private fun updateGameState(newBoard: List<List<Char?>>) {
-        val newStatus = if (checkWin(newBoard, _gameState.value.boardSize)) {
-            if (_gameState.value.currentPlayer == 'X') GameStatus.WIN_X else GameStatus.WIN_O
-        } else if (newBoard.all { row -> row.all { it != null } }) {
-            GameStatus.DRAW
-        } else {
-            GameStatus.IN_PROGRESS
+    private fun selectSymbol(symbol: PlayerSymbol) {
+        _gameState.value = _gameState.value.copy(
+            playerSymbol = symbol,
+            symbolSelectionDone = true,
+            // Устанавливаем currentPlayer на основе выбора игрока,
+            // или оставляем 'X', если символ игрока 'X', чтобы он ходил первым.
+            // Если игрок выбрал 'O', то первый ход делает компьютер (currentPlayer останется 'X' 
+            // и сразу после выбора символа может сработать makeComputerMove, если это желательно)
+            currentPlayer = if (symbol == PlayerSymbol.X) 'X' else 'O'
+        )
+         // Если игрок выбрал 'O', и компьютер должен ходить первым
+        if (symbol == PlayerSymbol.O && _gameState.value.gameStatus == GameStatus.IN_PROGRESS) {
+            viewModelScope.launch {
+                makeComputerMove('X') // Компьютер ходит крестиком
+            }
         }
+    }
+
+    private fun updateGameState(newBoard: List<List<Char?>>, lastPlayerSymbol: Char) {
+        val newStatus = checkGameStatus(newBoard, _gameState.value.boardSize, lastPlayerSymbol)
 
         _gameState.value = _gameState.value.copy(
-            board = newBoard,
-            currentPlayer = if (_gameState.value.currentPlayer == 'X') 'O' else 'X',
+            board = newBoard.map { it.toList() }, // Убедимся, что это неизменяемый список
+            // currentPlayer не меняется здесь, так как следующий игрок определяется логикой хода
             gameStatus = newStatus
         )
     }
-}
 
-sealed class GameAction {
-    data class CellClick(val row: Int, val col: Int) : GameAction()
-    object NewGame : GameAction()
-    data class SwitchGridSize(val size: Int) : GameAction()
+    private fun checkGameStatus(board: List<List<Char?>>, boardSize: Int, lastPlayerSymbol: Char): GameStatus {
+        // Проверка победителя
+        for (i in 0 until boardSize) {
+            // Проверка строк
+            if (board[i].all { it == lastPlayerSymbol }) return if (lastPlayerSymbol == 'X') GameStatus.WIN_X else GameStatus.WIN_O
+            // Проверка столбцов
+            if (board.all { it[i] == lastPlayerSymbol }) return if (lastPlayerSymbol == 'X') GameStatus.WIN_X else GameStatus.WIN_O
+        }
+        // Проверка диагоналей
+        if ((0 until boardSize).all { board[it][it] == lastPlayerSymbol }) return if (lastPlayerSymbol == 'X') GameStatus.WIN_X else GameStatus.WIN_O
+        if ((0 until boardSize).all { board[it][boardSize - 1 - it] == lastPlayerSymbol }) return if (lastPlayerSymbol == 'X') GameStatus.WIN_X else GameStatus.WIN_O
+
+        // Проверка на ничью
+        if (board.all { row -> row.all { it != null } }) return GameStatus.DRAW
+
+        return GameStatus.IN_PROGRESS
+    }
 }

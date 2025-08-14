@@ -32,7 +32,7 @@ fun GameBoard(
                 detectTapGestures { offset ->
                     val row = (offset.y / (size.height / state.boardSize)).toInt()
                     val col = (offset.x / (size.width / state.boardSize)).toInt()
-                    onAction(GameAction.CellClick(row, col))
+                    onAction(GameAction.MakeMove(row, col))
                 }
             }
     ) {

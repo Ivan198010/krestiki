@@ -56,15 +56,16 @@ fun GameScreen(state: GameState, onAction: (GameAction) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("") }, 
+                title = { Text("") },
                 actions = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (state.symbolSelectionDone) { // Показываем только если символ выбран
+                    // Показываем действия только после того, как игрок выбрал символ
+                    if (state.symbolSelectionDone) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             GridSizeToggleButton(state.boardSize, onAction)
                             Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Button(onClick = { onAction(GameAction.NewGame) }) {
-                            Text(if (state.symbolSelectionDone) "Новая игра" else "Сбросить выбор")
+                            Button(onClick = { onAction(GameAction.NewGame) }) {
+                                Text("Новая игра")
+                            }
                         }
                     }
                 }
@@ -82,7 +83,7 @@ fun GameScreen(state: GameState, onAction: (GameAction) -> Unit) {
                 SymbolSelectionScreen(onAction = onAction)
             } else {
                 GameBoard(state = state, onAction = onAction)
-                if (state.gameStatus != GameStatus.IN_PROGRESS) {
+                if (state.showResultDialog) { // Исправлено для поддержки задержки
                     GameResultDialog(status = state.gameStatus, onAction = onAction)
                 }
             }
@@ -111,11 +112,11 @@ fun SymbolSelectionScreen(onAction: (GameAction) -> Unit) {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class) 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GridSizeToggleButton(currentSize: Int, onAction: (GameAction) -> Unit) {
     val sizes = listOf(3, 5)
-    SingleChoiceSegmentedButtonRow { 
+    SingleChoiceSegmentedButtonRow {
         sizes.forEachIndexed { _, size ->
             SegmentedButton(
                 selected = currentSize == size,

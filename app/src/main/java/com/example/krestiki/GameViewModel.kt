@@ -72,7 +72,8 @@ class GameViewModel : ViewModel() {
         _gameState.value = GameState(
             boardSize = _gameState.value.boardSize,
             playerSymbol = null,
-            symbolSelectionDone = false
+            symbolSelectionDone = false,
+            showResultDialog = false // Сбрасываем флаг показа диалога
         )
     }
 
@@ -82,7 +83,8 @@ class GameViewModel : ViewModel() {
             boardSize = size,
             board = List(size) { List(size) { null } },
             playerSymbol = null,
-            symbolSelectionDone = false
+            symbolSelectionDone = false,
+            showResultDialog = false // Сбрасываем флаг показа диалога
         )
     }
 
@@ -106,6 +108,13 @@ class GameViewModel : ViewModel() {
             board = newBoard.map { it.toList() }, // Убедимся, что это неизменяемый список
             gameStatus = newStatus
         )
+
+        if (newStatus != GameStatus.IN_PROGRESS) {
+            viewModelScope.launch {
+                delay(2000) // Задержка 2 секунды перед показом диалога
+                _gameState.value = _gameState.value.copy(showResultDialog = true)
+            }
+        }
     }
 
     private fun checkGameStatus(board: List<List<PlayerSymbol?>>, boardSize: Int, lastPlayerSymbol: PlayerSymbol): GameStatus {

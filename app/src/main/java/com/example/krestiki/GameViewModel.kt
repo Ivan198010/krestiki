@@ -2,6 +2,7 @@ package com.example.krestiki
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -44,21 +45,25 @@ class GameViewModel : ViewModel() {
     }
 
     private fun makeComputerMove(computerSymbol: PlayerSymbol) {
-        val currentState = _gameState.value
-        val emptyCells = mutableListOf<Pair<Int, Int>>()
-        for (i in 0 until currentState.boardSize) {
-            for (j in 0 until currentState.boardSize) {
-                if (currentState.board[i][j] == null) {
-                    emptyCells.add(Pair(i, j))
+        viewModelScope.launch {
+            delay(2000) // Задержка 2 секунды
+
+            val currentState = _gameState.value
+            val emptyCells = mutableListOf<Pair<Int, Int>>()
+            for (i in 0 until currentState.boardSize) {
+                for (j in 0 until currentState.boardSize) {
+                    if (currentState.board[i][j] == null) {
+                        emptyCells.add(Pair(i, j))
+                    }
                 }
             }
-        }
 
-        if (emptyCells.isNotEmpty()) {
-            val (row, col) = emptyCells.random()
-            val newBoard = currentState.board.map { it.toMutableList() }.toMutableList()
-            newBoard[row][col] = computerSymbol
-            updateGameState(newBoard, computerSymbol) // Передаем символ компьютера
+            if (emptyCells.isNotEmpty()) {
+                val (row, col) = emptyCells.random()
+                val newBoard = currentState.board.map { it.toMutableList() }.toMutableList()
+                newBoard[row][col] = computerSymbol
+                updateGameState(newBoard, computerSymbol) // Передаем символ компьютера
+            }
         }
     }
 

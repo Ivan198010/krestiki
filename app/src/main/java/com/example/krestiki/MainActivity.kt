@@ -18,24 +18,6 @@ import androidx.compose.ui.unit.dp
 import com.example.krestiki.composables.GameBoard
 import com.example.krestiki.ui.theme.KrestikiTheme
 
-// Предполагается, что эти определения существуют в ваших файлах GameState.kt и GameAction.kt
-// enum class PlayerSymbol { X, O }
-// data class GameState(
-//     // ... другие состояния
-//     val playerSymbol: PlayerSymbol? = null,
-//     val symbolSelectionDone: Boolean = false,
-//     val boardSize: Int = 3, // значение по умолчанию
-//     val gameStatus: GameStatus = GameStatus.IN_PROGRESS // значение по умолчанию
-// )
-// sealed class GameAction {
-//     object NewGame : GameAction()
-//     data class SwitchGridSize(val size: Int) : GameAction()
-//     data class SelectSymbol(val symbol: PlayerSymbol) : GameAction()
-//     // ... другие действия
-// }
-// enum class GameStatus { IN_PROGRESS, WIN_X, WIN_O, DRAW }
-
-
 class MainActivity : ComponentActivity() {
     private val viewModel: GameViewModel by viewModels()
 
@@ -83,7 +65,7 @@ fun GameScreen(state: GameState, onAction: (GameAction) -> Unit) {
                 SymbolSelectionScreen(onAction = onAction)
             } else {
                 GameBoard(state = state, onAction = onAction)
-                if (state.showResultDialog) { // Исправлено для поддержки задержки
+                if (state.showResultDialog) {
                     GameResultDialog(status = state.gameStatus, onAction = onAction)
                 }
             }
@@ -138,11 +120,13 @@ fun GameResultDialog(status: GameStatus, onAction: (GameAction) -> Unit) {
         else -> ""
     }
     AlertDialog(
-        onDismissRequest = { onAction(GameAction.NewGame) },
+        onDismissRequest = { onAction(GameAction.HideResultDialog) },
         title = { Text("Игра окончена") },
         text = { Text(message) },
         confirmButton = {
-            Button(onClick = { onAction(GameAction.NewGame) }) {
+            Button(onClick = {
+                onAction(GameAction.NewGame)
+            }) {
                 Text("Сыграть снова")
             }
         }

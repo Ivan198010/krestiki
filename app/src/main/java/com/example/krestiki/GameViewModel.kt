@@ -17,6 +17,7 @@ class GameViewModel : ViewModel() {
             is GameAction.NewGame -> resetGame()
             is GameAction.SwitchGridSize -> setGridSize(action.size)
             is GameAction.SelectSymbol -> selectSymbol(action.symbol)
+            is GameAction.HideResultDialog -> _gameState.value = _gameState.value.copy(showResultDialog = false)
         }
     }
 
@@ -67,7 +68,8 @@ class GameViewModel : ViewModel() {
         _gameState.value = GameState(
             boardSize = _gameState.value.boardSize,
             playerSymbol = null,
-            symbolSelectionDone = false
+            symbolSelectionDone = false,
+            showResultDialog = false
         )
     }
 
@@ -77,7 +79,8 @@ class GameViewModel : ViewModel() {
             boardSize = size,
             board = List(size) { List(size) { null } },
             playerSymbol = null,
-            symbolSelectionDone = false
+            symbolSelectionDone = false,
+            showResultDialog = false
         )
     }
 
@@ -96,10 +99,11 @@ class GameViewModel : ViewModel() {
 
     private fun updateGameState(newBoard: List<List<PlayerSymbol?>>, lastPlayerSymbol: PlayerSymbol) {
         val newStatus = checkGameStatus(newBoard, _gameState.value.boardSize, lastPlayerSymbol)
-
+        val showDialog = newStatus != GameStatus.IN_PROGRESS
         _gameState.value = _gameState.value.copy(
             board = newBoard.map { it.toList() }, // Убедимся, что это неизменяемый список
-            gameStatus = newStatus
+            gameStatus = newStatus,
+            showResultDialog = showDialog
         )
     }
 

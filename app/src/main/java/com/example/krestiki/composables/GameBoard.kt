@@ -16,6 +16,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import com.example.krestiki.GameAction
 import com.example.krestiki.GameState
+import com.example.krestiki.PlayerSymbol
 
 @Composable
 fun GameBoard(
@@ -62,7 +63,7 @@ private fun DrawScope.drawGrid(boardSize: Int) {
 }
 
 private fun DrawScope.drawSymbols(
-    board: List<List<Char?>>,
+    board: List<List<PlayerSymbol?>>,
     textMeasurer: androidx.compose.ui.text.TextMeasurer
 ) {
     val cellSize = size.width / board.size
